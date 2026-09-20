@@ -11,6 +11,11 @@ class StreamingSimulator:
         self.current_index = 0
         self.database_url = database_url
 
+    def reset(self):
+        """Reset stream position so the next read starts from the first row."""
+        self.current_index = 0
+        return self
+
     def nextDataPoint(self):
         if self.current_index >= len(self.df):
             return None
@@ -43,11 +48,8 @@ class StreamingSimulator:
 
         print("Record saved to database.")
 
-    def plotDataPoint(self, data_point):
-
-        # Clear the previous chart
-        clear_output(wait=True)
-
+    def plotDataPoint(self, data_point, stream_history=None):
+        """Plot each robot axis current over time as a multi-line dashboard."""
         axes = [
             "Axis #1",
             "Axis #2",
@@ -56,44 +58,66 @@ class StreamingSimulator:
             "Axis #5",
             "Axis #6",
             "Axis #7",
-            "Axis #8"
+            "Axis #8",
         ]
 
-        values = [float(data_point[axis]) for axis in axes]
+        if stream_history is None:
+            stream_history = pd.DataFrame([data_point.to_dict()])
+        elif not stream_history.empty:
+            stream_history = pd.concat(
+                [stream_history, pd.DataFrame([data_point.to_dict()])],
+                ignore_index=True,
+            )
 
-        plt.figure(figsize=(10, 5))
-        plt.bar(axes, values)
+        if "Time" not in stream_history.columns:
+            stream_history["Time"] = pd.NaT
 
-        plt.title(
-            f"Robot Current - {data_point['Time']}"
-        )
-        plt.xlabel("Robot Axis")
+        stream_history = stream_history[["Time", *axes]].copy()
+        stream_history["Time"] = pd.to_datetime(stream_history["Time"], errors="coerce")
+
+        clear_output(wait=True)
+        plt.figure(figsize=(12, 6))
+
+        for axis in axes:
+            axis_history = stream_history[["Time", axis]].dropna().copy()
+            if axis_history.empty:
+                continue
+            plt.plot(axis_history["Time"], axis_history[axis], marker="o", linewidth=2, label=axis)
+
+        plt.title("Robot Current by Axis Over Time")
+        plt.xlabel("Time")
         plt.ylabel("Current")
-
         plt.xticks(rotation=45)
+        plt.legend(title="Robot Axis")
+        plt.grid(True, alpha=0.3)
         plt.tight_layout()
         plt.show()
 
-    def startStreaming(self, number_of_records=10):
+        return plt.gcf(), plt.gca()
+
+    def startStreaming(self, number_of_records=10, reset=True):
         import time
 
-        for i in range(number_of_records):
+        if reset:
+            self.reset()
 
-            # Get the next record from the CSV
+        stream_history = pd.DataFrame()
+
+        for i in range(number_of_records):
             data_point = self.nextDataPoint()
 
             if data_point is None:
                 print("End of CSV file.")
                 break
 
-            # Save the record to PostgreSQL
             self.saveToDatabase(data_point)
-
-            # Plot the current robot data
-            self.plotDataPoint(data_point)
+            stream_history = pd.concat(
+                [stream_history, pd.DataFrame([data_point.to_dict()])],
+                ignore_index=True,
+            )
+            self.plotDataPoint(data_point, stream_history)
 
             print(f"Streamed record {i + 1}")
             print(f"Time: {data_point['Time']}")
 
-            # Simulate controller reading every 2 seconds
             time.sleep(2)
