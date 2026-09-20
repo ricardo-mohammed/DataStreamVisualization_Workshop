@@ -1,25 +1,52 @@
-# Modular Robot Telemetry Project
+# Data Stream Visualization Workshop (CSCN8010) - Group 3
 
-The program is separated by responsibility:
+### Team Members
+* Ricardo Mohammed (7500382)
+* Senay
+* Zeynep
+* Juan
 
-- `data_loader.py` loads, cleans, and simulates streaming CSV records.
-- `database.py` connects to PostgreSQL and stores/counts records.
-- `visualization.py` builds the interactive Plotly time-series graph.
-- `main.py` imports and calls the other modules.
+---
 
-## Setup
+## Overview
+For the Data Stream Visualization Workshop, we are tasked with creating a simulation of a robot's telemetry data. We are utilizing a dataset that tracks the Current (A) for different robot axes over time. 
 
-1. Open a terminal in this folder.
-2. Install packages: `pip install -r requirements.txt`
-3. Copy `.env.example` to `.env`.
-4. Put the newly rotated Neon connection URL in `.env` as `DATABASE_URL=...`.
-5. Check that `CSV_PATH` in `main.py` points to your CSV.
-6. Run: `python main.py`
+Our primary goal is to loosely simulate the **CAT process** illustrated in class. 
 
-The chart opens interactively and is also saved as `robot_telemetry.html`.
+## Project Tasks & CAT Mapping
 
-## Why Plotly?
+| # | Project Task | CAT Process Role |
+|---|---|---|
+| **1** | Load the data from the CSV into Python | Robot data is collected by the Data Collection Agent |
+| **2** | Persist the data in a relational database (Neon) | Data Collection Agent sends the data to the CAT Database |
+| **3** | Read the data back from the Neon database and create a live dashboard of the data | Read the data back from the CAT Database |
+| **4** | Look for anomalies and other observations based on the dashboard | Do Statistical Analysis / AI Analysis on the data |
 
-Plotly fits this data better than a static Matplotlib or Seaborn chart because
-you can hover over exact timestamps, hide/show individual axes, zoom into a
-movement interval, and use the range slider to inspect long recordings.
+---
+
+<p align="center">
+  <img src="./images/cat_process.png" alt="CAT Process Diagram" width="500">
+  <br>
+  <em>Diagram 1: CAT Process Illustration</em>
+</p>
+
+
+## Setup Instructions
+
+1. **Open a terminal** in the project root folder.
+2. **Install the required packages**:
+   ```bash
+   pip install -r requirements.txt
+   ```
+3. **Configure your environment variables**:
+   * Copy `.env.example` to a new file named `.env`.
+   * Add your newly rotated Neon connection URL into the `.env` file:
+     ```env
+     DATABASE_URL=your_neon_connection_url_here
+     ```
+4. **Verify the data source**:
+   * Check that `CSV_PATH` in `main.py` correctly points to your local CSV file.
+5. **Run the application**:
+   ```bash
+   python main.py
+   ```
