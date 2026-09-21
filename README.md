@@ -2,9 +2,9 @@
 
 ### Team Members
 * Ricardo Mohammed (7500382)
-* Senay
-* Zeynep
-* Juan
+* Senay Teweldebrhan (9120588)
+* Zeynep Ozdemir (9045142)
+* Juan Camilo Chirivi (9115141)
 
 ---
 
