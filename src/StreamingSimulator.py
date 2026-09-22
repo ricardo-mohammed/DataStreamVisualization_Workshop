@@ -1,7 +1,11 @@
 import pandas as pd
 from sqlalchemy import create_engine
+from sqlalchemy import text
 import matplotlib.pyplot as plt
 from IPython.display import clear_output
+from collections import deque
+
+from database import quote_identifier
 
 
 class StreamingSimulator:
@@ -121,3 +125,56 @@ class StreamingSimulator:
             print(f"Time: {data_point['Time']}")
 
             time.sleep(2)
+
+
+class PostgreSQLStream:
+    """Read PostgreSQL telemetry sequentially using the simulator API."""
+
+    def __init__(
+        self,
+        engine,
+        columns,
+        table_name="robot_telemetry",
+        schema="public",
+        batch_size=100,
+    ):
+        self.engine = engine
+        self.columns = columns
+        self.table_name = table_name
+        self.schema = schema
+        self.batch_size = batch_size
+        self.offset = 0
+        self.pending_records = deque()
+
+    def reset(self):
+        self.offset = 0
+        self.pending_records.clear()
+        return self
+
+    def _load_next_batch(self):
+        selected = ", ".join(
+            quote_identifier(self.engine, column) for column in self.columns
+        )
+        query = text(
+            f"SELECT {selected} "
+            f"FROM {quote_identifier(self.engine, self.schema)}."
+            f"{quote_identifier(self.engine, self.table_name)} "
+            f"ORDER BY {quote_identifier(self.engine, 'Time')} ASC "
+            "LIMIT :batch_size OFFSET :row_offset"
+        )
+        with self.engine.connect() as connection:
+            result = connection.execute(
+                query,
+                {"batch_size": self.batch_size, "row_offset": self.offset},
+            )
+            self.pending_records.extend(dict(row._mapping) for row in result)
+
+    def nextDataPoint(self):
+        """Return the next row, or None when all current rows are consumed."""
+        if not self.pending_records:
+            self._load_next_batch()
+        if not self.pending_records:
+            return None
+
+        self.offset += 1
+        return pd.Series(self.pending_records.popleft())
